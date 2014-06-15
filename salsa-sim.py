@@ -3,42 +3,60 @@ Created on Feb 19, 2013
 
 @author: Umank
 '''
-
+"""
+The number of groups are limited (hard-coded) to 8 right now.
+"""
 import sys
 import random
 from random import choice
 import math
 import datetime
 
-class SimPrj2(object):
-    
-    def __init__(self, redundancy_factor = 3, bad_nodes = 200, max_id = (2**63)-1, total_groups = 8, total_nodes = 500, target_id = None):
-            self.redundancy_factor = redundancy_factor
+class SalsaSim(object):
+    """
+
+    """
+    def __init__(self, redundancy_factor = None, bad_nodes = None, max_id = (2**63)-1, total_groups = 8, total_nodes = None, target_id = None):
+            if(redundancy_factor is None):
+                self.redundancy_factor = 3
+            else:
+                self.redundancy_factor = redundancy_factor
+            
+            if(bad_nodes is None):
+                self.bad_nodes = 200
+            else:
+                self.bad_nodes = bad_nodes
+            
+            if(total_nodes is None):
+                self.total_nodes = 500
+            else:
+                self.total_nodes = total_nodes
+
             self.max_id = max_id
             self.total_groups = total_groups
-            temp_levels = math.log(total_groups,2)
-            if (temp_levels%1 == 0):
-                self.total_levels = int(temp_levels)
+            
+            if (total_groups is not 0) and (not (total_groups & (total_groups - 1))):
+                self.total_levels = math.log(total_groups, 2)
                 self.total_groups = total_groups
+                self.nodes_per_group = self.total_nodes/self.total_groups
             else:
-                print 'The number of groups need to be a power of 2..'
+                print ('The number of groups need to be a power of 2..')
                 sys.exit()                                   
-            self.bad_nodes = bad_nodes
-            self.id_per_group = max_id/total_groups;
-            self.total_nodes = total_nodes
-            self.nodes_per_group = total_nodes/total_groups
-            if  target_id is None:
+            
+            self.id_per_group = self.max_id/self.total_groups;
+            
+            if target_id is None:
                 self.target_id = random.randrange(max_id)
             else:
                 self.target_id = target_id
             if self.bad_nodes >= self.total_nodes:
-                print 'Number of Bad nodes equal to or more than Total number of Nodes..'
+                print ('Number of Bad nodes equal to or more than Total number of Nodes..')
                 sys.exit()
             if self.redundancy_factor < 1:
-                print 'Select to run at least one lookup to see results..'
+                print ('Select to run at least one lookup to see results..')
                 sys.exit()
             if self.target_id>self.max_id:
-                print 'Target ID out of range.'
+                print ('Target ID out of range.')
                 sys.exit()
     
     def generate_groups(self):
@@ -78,7 +96,7 @@ class SimPrj2(object):
         minint = 0
         maxint = self.id_per_group
         for group_index in range(self.total_groups):
-            for nodes_index in range(self.nodes_per_group):            
+            for nodes_index in range(int(self.nodes_per_group)):            
                 node_self_dict={}
                 #node_number = str(nodes_group_index)+str(node_index)
                 #print node_id
@@ -214,15 +232,13 @@ class SimPrj2(object):
                 break
         for ids in node_dict.keys():      
             if target_group is node_dict[ids]['node_group']:
-                #print x
-                #print ids
                 if ids < end:
                     greater_check = greater_check + 1
                     temp_dist = end - ids
                     if temp_dist < dist:
                             dist = temp_dist
                             owner = ids
-                            #print 'YESSSSSSSSSSS'
+
         if greater_check == 0:
             temp_list = []
             for ids in node_dict.keys():      
@@ -230,9 +246,9 @@ class SimPrj2(object):
                     temp_list.append(ids)
             temp_list.sort(key=None, reverse=True)    
             owner = temp_list[0]
-        
+
         while True:
-            start = choice(node_dict.keys())
+            start = choice(list(node_dict.keys()))
             if node_dict[start]['node_group'] != node_dict[owner]['node_group']:
                 break
         
@@ -242,7 +258,7 @@ class SimPrj2(object):
         bad_nodes = []
         for x in range(self.bad_nodes):
             while True:
-                bad_node = choice(node_dict.keys())
+                bad_node = choice(list(node_dict.keys()))
                 if bad_node not in bad_nodes and bad_node != starting_node:
                     #new_dict.pop(bad_node)
                     bad_nodes.append(bad_node)
@@ -267,7 +283,7 @@ class SimPrj2(object):
                 
             else:
                 while True:
-                    red_start = choice(node_dict.keys())
+                    red_start = choice(list(node_dict.keys()))
                     if (node_dict[red_start]['node_group'] == node_dict[start]['node_group']) and (red_start not in started_at):
                         next_hop = red_start
                         break    
@@ -305,7 +321,7 @@ class SimPrj2(object):
                         #time = end_time - start_time
                         #print 'Total Execution Time : ' + str(total_time.microseconds)
                     else:
-                        print 'Unexpected Error.. Node not found.. Please try again.'
+                        print ('Unexpected Error.. Node not found.. Please try again.')
             total_hops = total_hops + len(nodes_taken)
             #print 'Number of Hops this lookup : ' + str(total_hops)
         
@@ -331,7 +347,7 @@ if __name__ == '__main__':
     for x in range(count):
         sys.stdout.flush()
         #print '\nRunning Loop ' + str(x+1)
-        obj1 = SimPrj2()
+        obj1 = SalsaSim()
         #print obj1.generate_id_space()
         #print obj1.generate_groups()
         sys.stdout.write('Running Loop #{0}.. {1} loops remaining..\r'.format(x+1, count-x-1))
@@ -355,8 +371,8 @@ if __name__ == '__main__':
     res = fin_num/count
     hops = fin_hops/count
     total_found = float((found*100)/count)
-    print '\n\nCompletion Statistics:\n\tRedundancy = ' + str(obj1.redundancy_factor) + ', Total Nodes = ' + str(obj1.total_nodes) + ', Fraction of Attackers = ' + str(rate['Attackers']) + ', Successful Lookups = '+ str(res) + '%.'
-    print '\nInitiator = ' + str(lookup_status['Initiator']) + '\nTarget = ' + str(lookup_status['Target'])
+    print ('\n\nCompletion Statistics:\n\tRedundancy = ' + str(obj1.redundancy_factor) + ', Total Nodes = ' + str(obj1.total_nodes) + ', Fraction of Attackers = ' + str(rate['Attackers']) + ', Successful Lookups = '+ str(res) + '%.')
+    print ('\nInitiator = ' + str(lookup_status['Initiator']) + '\nTarget = ' + str(lookup_status['Target']))
     #print '\nAverage Hop Count = ' + str(hops)
-    print '\nAverage Successful Route Completion Rate = ' + str(total_found) +'%'
-    print '\nEnd of Execution..!!'
+    print ('\nAverage Successful Route Completion Rate = ' + str(total_found) +'%')
+    print ('\nEnd of Execution..!!')
